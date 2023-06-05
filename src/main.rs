@@ -2,6 +2,7 @@
 // use std::collections::VecDeque;
 use std::{collections::HashMap, fs, time::Duration};
 use log::{info, warn};
+use positions_alarm::adapters::binance;
 use serde_json::{Map, Value};
 // use tokio::{sync::broadcast::{self, Receiver}};
 use positions_alarm::adapters::binance::futures::http::actions::BinanceFuturesApi;
@@ -91,52 +92,64 @@ async fn real_time(
 
         let res = trade_mapper::TradeMapper::get_positions();
         println!("res:{:?}", res);
-        if let Ok(i) = res{
-            println!("i:{:?}", i);
-
-        };
 
         
 
-        for f_config in binance {
+        
+        if let Ok(a) = res{
+        for f_config in a {
             
-            let binance_config = f_config.as_object().unwrap();
+            // let binance_config = f_config.as_object().unwrap();
             let binance_futures_api=BinanceFuturesApi::new(
                 "https://fapi.binance.com",
-                binance_config
-                    .get("api_key")
-                    .unwrap()
-                    .as_str()
-                    .unwrap(),
-                binance_config
-                    .get("secret_key")
-                    .unwrap()
-                    .as_str()
-                    .unwrap(),
+                &f_config.api_key,
+                &f_config.secret_key,
             );
-            let name = binance_config.get("name").unwrap().as_str().unwrap();
-            if let Some(data) = binance_futures_api.get_open_orders(None).await {
+            let name = f_config.name;
+            let threshold: f64 = f_config.threshold.as_str().parse().unwrap();
+            if let Some(data) = binance_futures_api.account(None).await {
                 let v: Value = serde_json::from_str(&data).unwrap();
-                let vec = v.as_array().unwrap();
+                let positions = v.as_object().unwrap().get("positions").unwrap().as_array().unwrap();
+                let mut amts: f64 = 0.0;
+                let mut prices: f64 = 0.0;
                 
-                println!("获取到的账户挂单信息:{:?}, 名字{}", vec, name);
-                if vec.len() == 0 {
-                    if i != 0 {
-                        let sender = format!("{}账号", name);
-                        let content = format!("一分钟内没有新挂单");
-                        wx_robot.send_text(&sender, &content).await;
+                println!("获取到的账户持仓:{:?}, 名字{}, 阈值{}", positions, name, threshold);
+                for p in positions {
+                    let obj = p.as_object().unwrap();
+                    let position_amt: f64 = obj.get("positionAmt").unwrap().as_str().unwrap().parse().unwrap();
+                    
+                    if position_amt == 0.0 {
+                        continue;
+                    } else {
+                        
+                    let symbol = obj.get("symbol").unwrap().as_str().unwrap();
+                    let symbols= &symbol[0..symbol.len()-4];
+                    // println!("symbols: {},symbol: {}", symbols, symbol);
+                    let sbol = format!("{}USDT", symbols);
+                    // println!("传过去的参数{}", sbol);
+                        if let Some(data) = binance_futures_api.get_klines(&sbol).await {
+                            let v: Value = serde_json::from_str(&data).unwrap();
+                            let price_obj = v.as_object().unwrap();
+        
+                            let price:f64 = price_obj.get("price").unwrap().as_str().unwrap().parse().unwrap();
+                            // let new_amt = position_amt * price;
+                            amts += position_amt;
+                            prices = price;
+                        }
                     }
-                    continue;
-    
-                } else {
-                  println!("当前有挂单{}", vec.len());
+        
+                }
+                if amts.abs() > threshold {
+                    println!("高于阈值")
                 }
                 // net_worth = notional_total/ori_fund;
                 // net_worth_histories.push_back(Value::from(new_account_object));
             }
+            
 
              
         }
+    }
         i += 1;
 
 
