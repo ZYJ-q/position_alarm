@@ -91,6 +91,12 @@ async fn real_time(
 
         let res = trade_mapper::TradeMapper::get_positions();
         println!("res:{:?}", res);
+        if let Ok(i) = res{
+            println!("i:{:?}", i);
+
+        };
+
+        
 
         for f_config in binance {
             

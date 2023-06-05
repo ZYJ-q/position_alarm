@@ -11,7 +11,7 @@ use super::db_data::Positions;
 
 
 impl TradeMapper {
-  // 获取配置文件数据
+// 获取配置文件数据
   pub fn get_positions() -> Result<Vec<Positions>> {
     // 连接数据库
     let mut conn = get_connect();
