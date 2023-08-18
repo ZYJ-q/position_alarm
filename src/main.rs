@@ -16,9 +16,7 @@ use positions_alarm::actors::trade_mapper::*;
 
 #[warn(unused_mut, unused_variables, dead_code)]
 async fn real_time(
-    binance: &Vec<Value>,
     symbols: &Vec<Value>,
-    wx_robot: WxbotHttpClient,
 ) {
     //rece: &mut Receiver<&str>){
     info!("get ready for real time loop");
@@ -285,10 +283,10 @@ async fn main() {
         let symbols = config.get("Symbols").unwrap().as_array().unwrap();
         let key = config.get("Alarm").unwrap().get("webhook").unwrap().as_str().unwrap();
         // info!("获取key");
-        let mut wxbot = String::from("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=");
-        wxbot.push_str(key);
-        info!("wxbot  {}", wxbot);
-        let wx_robot = WxbotHttpClient::new(&wxbot);
+        // let mut wxbot = String::from("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=");
+        // wxbot.push_str(key);
+        // info!("wxbot  {}", wxbot);
+        // let wx_robot = WxbotHttpClient::new(&wxbot);
         info!("preparing...");
 
         // for s_config in server_config{
@@ -358,7 +356,7 @@ async fn main() {
         
         info!("created http client");
 
-            real_time(binance_future_config, symbols, wx_robot).await;
+            real_time(symbols).await;
         
     });
 
