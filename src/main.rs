@@ -104,7 +104,7 @@ async fn real_time(
             let threshold = f_config.threshold;
             let new_tra_id = &f_config.tra_id;
             let thres_am = &f_config.amount;
-            let amount: f64  = thres_am.as_str().parse().unwrap();
+            let amount: f64  = thres_am.parse().unwrap();
             
             if &f_config.tra_venue == "Binance" && &f_config.r#type == "Futures" {
                 let binance_futures_api=BinanceFuturesApi::new(
