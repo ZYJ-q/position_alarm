@@ -25,7 +25,7 @@ impl BinancePapiApi {
 
         let response = self
             .client
-            .send(Method::GET, "/papi/v1/balance", true, &mut params)
+            .send(Method::GET, "/papi/v1/um/account", true, &mut params)
             .await;
 
         let res_data = self.client.check_response_data(response);
