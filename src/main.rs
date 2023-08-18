@@ -306,6 +306,7 @@ async fn real_time(
                 if threshold == "true" && amount != 0.0 {
                     if let Some (data) = binance_papi_api.account().await {
                         let value: Value = serde_json::from_str(&data).unwrap();
+                        println!("value{}", value);
                         let positions = value.as_object().unwrap().get("positions").unwrap().as_array().unwrap();
                         let mut amts = 0.0;
                         for p in positions {
