@@ -6,8 +6,10 @@ use positions_alarm::adapters::binance;
 use serde_json::{Map, Value};
 // use tokio::{sync::broadcast::{self, Receiver}};
 use positions_alarm::adapters::binance::futures::http::actions::BinanceFuturesApi;
+use positions_alarm::adapters::bybit::futures::http::actions::ByBitFuturesApi;
 // use open_order_alarm::base::ssh::SshClient;
 use positions_alarm::base::wxbot::WxbotHttpClient;
+use positions_alarm::base::slackbot::SlackHttpClient;
 use positions_alarm::actors::*;
 // use test_alarm::models::http_data::*;
 use positions_alarm::actors::trade_mapper::*;
@@ -91,6 +93,7 @@ async fn real_time(
 
 
         let res = trade_mapper::TradeMapper::get_positions();
+        let weixin = trade_mapper::TradeMapper::get_weixin().unwrap();
         println!("res:{:?}", res);
 
         
@@ -98,53 +101,138 @@ async fn real_time(
         
         if let Ok(a) = res{
         for f_config in a {
+
+            let tra_name = &f_config.name;
+            let threshold = f_config.threshold;
+            let new_tra_id = &f_config.tra_id;
+            let thres_am = f_config.amount;
+            let amount: f64 = thres_am.as_str().parse().unwrap();
             
-            // let binance_config = f_config.as_object().unwrap();
-            let binance_futures_api=BinanceFuturesApi::new(
-                "https://fapi.binance.com",
-                &f_config.api_key,
-                &f_config.secret_key,
-            );
-            let name = f_config.name;
-            let threshold: f64 = f_config.threshold.as_str().parse().unwrap();
-            if let Some(data) = binance_futures_api.account(None).await {
-                let v: Value = serde_json::from_str(&data).unwrap();
-                let positions = v.as_object().unwrap().get("positions").unwrap().as_array().unwrap();
-                let mut amts: f64 = 0.0;
-                let mut prices: f64 = 0.0;
+            if &f_config.tra_venue == "Binance" && &f_config.r#type == "Futures" {
+                let binance_futures_api=BinanceFuturesApi::new(
+                    "https://fapi.binance.com",
+                    &f_config.api_key,
+                    &f_config.secret_key,
+                );
+                let name = tra_name;
                 
-                println!("获取到的账户持仓:{:?}, 名字{}, 阈值{}", positions, name, threshold);
-                for p in positions {
-                    let obj = p.as_object().unwrap();
-                    let position_amt: f64 = obj.get("positionAmt").unwrap().as_str().unwrap().parse().unwrap();
-                    
-                    if position_amt == 0.0 {
-                        continue;
-                    } else {
+                if threshold == "true" && thres_am.len() != 0 {
+                    if let Some(data) = binance_futures_api.account(None).await {
+                        let v: Value = serde_json::from_str(&data).unwrap();
+                        let positions = v.as_object().unwrap().get("positions").unwrap().as_array().unwrap();
+                        let mut amts: f64 = 0.0;
+                        // let mut prices: f64 = 0.0;
                         
-                    let symbol = obj.get("symbol").unwrap().as_str().unwrap();
-                    let symbols= &symbol[0..symbol.len()-4];
-                    // println!("symbols: {},symbol: {}", symbols, symbol);
-                    let sbol = format!("{}USDT", symbols);
-                    // println!("传过去的参数{}", sbol);
-                        if let Some(data) = binance_futures_api.get_klines(&sbol).await {
-                            let v: Value = serde_json::from_str(&data).unwrap();
-                            let price_obj = v.as_object().unwrap();
-        
-                            let price:f64 = price_obj.get("price").unwrap().as_str().unwrap().parse().unwrap();
-                            // let new_amt = position_amt * price;
-                            amts += position_amt;
-                            prices = price;
+                        println!("获取到的账户持仓:{:?}, 名字{}, 阈值{}", positions, name, threshold);
+                        for p in positions {
+                            let obj = p.as_object().unwrap();
+                            let position_amt: f64 = obj.get("positionAmt").unwrap().as_str().unwrap().parse().unwrap();
+                            
+                            if position_amt == 0.0 {
+                                continue;
+                            } else {
+                                
+                            let symbol = obj.get("symbol").unwrap().as_str().unwrap();
+                            let symbols= &symbol[0..symbol.len()-4];
+                            // println!("symbols: {},symbol: {}", symbols, symbol);
+                            let sbol = format!("{}USDT", symbols);
+                            // println!("传过去的参数{}", sbol);
+                                if let Some(data) = binance_futures_api.get_klines(&sbol).await {
+                                    let v: Value = serde_json::from_str(&data).unwrap();
+                                    let price_obj = v.as_object().unwrap();
+                
+                                    let price:f64 = price_obj.get("price").unwrap().as_str().unwrap().parse().unwrap();
+                                    let new_amt = position_amt * price;
+                                    amts += new_amt;
+                                    // prices = price;
+                                }
+                            }
+                
                         }
+                        if amts.abs() > amount {
+                            for f_weixin in &weixin {
+                                let tra_id = &f_weixin.tra_id;
+                                let wx_hook = &f_weixin.wx_hook;
+                                let slack_hook = &f_weixin.slack_hook;
+                                if new_tra_id == tra_id {
+                                    if wx_hook.len() != 0 {
+                                        let mut wxbot = String::from("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=");
+                                        wxbot.push_str(&wx_hook);
+                                        info!("wxbot  {}", wxbot);
+                                        let wx_robot = WxbotHttpClient::new(&wxbot);
+
+                                        let sender = format!("Binance交易所的----{}普通账号", name);
+                        let content = format!("净头寸高于阈值");
+                        wx_robot.send_text(&sender, &content).await;
+
+                                    }
+
+                                    if slack_hook.len() != 0 {
+                                        let mut slackrobot = String::from("https://hooks.slack.com/services/");
+                slackrobot.push_str(&slack_hook);
+                let slack_robot = SlackHttpClient::new(&slackrobot);
+
+                let sender = format!("Binance交易所的----{}普通账号", name);
+                let content = format!("净头寸高于阈值");
+                slack_robot.send_text(&sender, &content).await;
+
+                                    }
+                                }
+                            }
+                            println!("高于阈值")
+                        }
+                        // net_worth = notional_total/ori_fund;
+                        // net_worth_histories.push_back(Value::from(new_account_object));
                     }
-        
                 }
-                if amts.abs() > threshold {
-                    println!("高于阈值")
-                }
-                // net_worth = notional_total/ori_fund;
-                // net_worth_histories.push_back(Value::from(new_account_object));
             }
+
+
+            if &f_config.tra_venue == "ByBit" {
+                let bybit_futures_api=ByBitFuturesApi::new(
+                    "https://api.bybit.com",
+                    &f_config.api_key,
+                    &f_config.secret_key,
+                );
+                let name = tra_name;
+
+                if threshold == "true" && thres_am.len() != 0 {
+                    if let Some(data) = bybit_futures_api.get_account_overview(None).await {
+                        let value: Value = serde_json::from_str(&data).unwrap();
+                        let mut spot_positions = 0.0;
+                        let assets = value.as_object().unwrap().get("result").unwrap().as_object().unwrap();
+                        let list = assets.get("list").unwrap().as_array().unwrap();
+
+                        for a in list {
+                            let obj = a.as_object().unwrap();
+                            let coin = obj.get("coin").unwrap().as_array().unwrap();
+                            for c in coin {
+                                let objs = c.as_object().unwrap();
+                                let amt: f64 = objs.get("walletBalance").unwrap().as_str().unwrap().parse().unwrap();
+
+                                if amt == 0.0 {
+                                    continue;
+                                } else {
+                                    let symbol = objs.get("coin").unwrap().as_str().unwrap();
+                                    if symbol != "USDT" && symbol != "USDC" {
+                                        let usd_value = objs.get("usdValue").unwrap().as_str().unwrap();
+                                        println!("wallet_balance:{}, usd_value:{}", amt, usd_value);
+                                        
+
+                                    }
+                                }
+                            }
+                        }
+
+                        
+                    }
+                    
+
+                }
+
+
+            }
+            
             
 
              
