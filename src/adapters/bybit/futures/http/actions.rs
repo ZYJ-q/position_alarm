@@ -45,6 +45,54 @@ impl ByBitFuturesApi {
     }
 
 
+    pub async fn position(&self, category: &str) -> Option<String> {
+      let mut params: HashMap<String, Value> = HashMap::new();
+      params.insert(String::from("category"), Value::from(category));
+      params.insert(String::from("settleCoin"), Value::from("USDT"));
+
+      let response = self
+          .client
+          .send(Method::GET, "/v5/position/list", true, &mut params)
+          .await;
+
+      let res_data = self.client.check_response_data(response);
+
+      match res_data {
+          Some(data) => {
+              return Some(data);
+          }
+          None => {
+              return None;
+          }
+      }
+  }
+  pub async fn get_klines(&self, symbol: &str) -> Option<String> {
+      let mut params: HashMap<String, Value> = HashMap::new();
+      params.insert(String::from("symbol"), Value::from(symbol));
+
+      // let now_time = Utc::now().timestamp_millis();
+      // params.insert(String::from("interval"), Value::from("15m"));
+      
+
+      let response = self
+          .client
+          .send(Method::GET, "/fapi/v1/ticker/price", true, &mut params)
+          .await;
+
+      let res_data = self.client.check_response_data(response);
+
+      match res_data {
+          Some(data) => {
+              // print!("K线数据{}", data);
+              return Some(data);
+          }
+          None => {
+              return None;
+          }
+      }
+  }
+
+
 
     pub async fn get_bybit_open_orders(&self, category: &str) -> Option<String> {
         // let my_currency = String::from(currency.unwrap_or("USDT"));
