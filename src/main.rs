@@ -195,7 +195,7 @@ async fn real_time(
                 let name = tra_name;
 
                 if threshold == "true" && amount == 0.0  {
-                    if let Some(data) = bybit_futures_api.get_account_overview(None).await {
+                    if let Some(data) = bybit_futures_api.get_account_overview().await {
                         let value: Value = serde_json::from_str(&data).unwrap();
                         let mut spot_positions = 0.0;
                         let assets = value.as_object().unwrap().get("result").unwrap().as_object().unwrap();

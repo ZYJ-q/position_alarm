@@ -19,14 +19,11 @@ impl ByBitFuturesApi {
         Self { client: client }
     }
 
-    pub async fn get_account_overview(&self, account_type: Option<&str>) -> Option<String> {
+    pub async fn get_account_overview(&self) -> Option<String> {
         // let my_currency = String::from(currency.unwrap_or("USDT"));
 
         let mut params: HashMap<String, Value> = HashMap::new();
-        params.insert(
-            String::from("accountType"),
-            Value::from(account_type),
-        );
+        params.insert(String::from("accountType"), Value::from("UNIFIED"));
 
         let response = self
             .client
@@ -35,7 +32,7 @@ impl ByBitFuturesApi {
 
         let res_data = self.client.check_response_data(response);
 
-        println!("账户信息11111111111111111111{:?}", res_data);
+        // println!("账户信息11111111111111111111{:?}", res_data);
 
         match res_data {
             Some(data) => {
