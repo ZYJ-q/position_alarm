@@ -114,7 +114,7 @@ async fn real_time(
                 );
                 let name = tra_name;
                 
-                if threshold == "true" && thres_am.len() != 0 {
+                if threshold == "true" && amount == 0.0 {
                     if let Some(data) = binance_futures_api.account(None).await {
                         let v: Value = serde_json::from_str(&data).unwrap();
                         let positions = v.as_object().unwrap().get("positions").unwrap().as_array().unwrap();
@@ -194,7 +194,7 @@ async fn real_time(
                 );
                 let name = tra_name;
 
-                if threshold == "true" && thres_am.len() != 0 {
+                if threshold == "true" && amount == 0.0  {
                     if let Some(data) = bybit_futures_api.get_account_overview(None).await {
                         let value: Value = serde_json::from_str(&data).unwrap();
                         let mut spot_positions = 0.0;
