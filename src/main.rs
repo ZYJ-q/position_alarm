@@ -143,21 +143,7 @@ async fn real_time(
                             //                     }
                                         }
                                         println!("高于阈值")
-                                    } else {
-                                        let wx_notices = trade_mapper::TradeMapper::get_weixin(acc_id).unwrap();
-                                        for f_weixin in wx_notices {
-                                            let wx_hook = &f_weixin.wx_hook;
-                                                    let mut wxbot = String::from("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=");
-                                                    wxbot.push_str(&wx_hook);
-                                                    info!("wxbot  {}", wxbot);
-                                                    let wx_robot = WxbotHttpClient::new(&wxbot);
-            
-                                                    let sender = format!("Binance交易所的----{}普通账号", name);
-                                    let content = format!("净头寸低于阈值");
-                                    wx_robot.send_text(&sender, &content).await;
-                                        
-                                    }
-                                }
+                                    } 
                                     // net_worth = notional_total/ori_fund;
                                     // net_worth_histories.push_back(Value::from(new_account_object));
                                 } else {
