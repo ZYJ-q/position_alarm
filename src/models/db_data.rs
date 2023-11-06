@@ -1,3 +1,5 @@
+use std::string;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,11 +46,27 @@ pub struct Positions {
     pub secret_key: String,
     pub r#type: String,
     pub name: String,
-    pub alarm: String,
-    pub threshold: String,
     pub borrow: String,
-    pub amount: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AccAlarm {
+    pub id: u64,
+    pub acc_id: u64,
+    pub tra_id: u64,
+    pub open_alarm: String,
+    pub position_alarm: String,
+    pub position_amount: String,
+    pub equity_alarm: String,
+    pub equity_amount: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WxNotices {
+    pub id: u64,
+    pub acc_id: u64,
     pub wx_hook: String,
+    pub wx_name: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
